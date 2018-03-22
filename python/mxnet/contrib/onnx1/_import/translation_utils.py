@@ -87,6 +87,7 @@ def _pad_sequence_fix(attr, kernel_dim=None):
 def _fix_pooling(pool_type, inputs, new_attr):
     """onnx pooling operator supports asymmetrical padding
     Adding pad operator before pooling in mxnet to work with onnx"""
+    #print("calling")
     stride = new_attr.get('stride')
     kernel = new_attr.get('kernel')
     padding = new_attr.get('pad')
@@ -96,20 +97,43 @@ def _fix_pooling(pool_type, inputs, new_attr):
     #    Step 1. Add extra dummy dimension to make it 4D. Adding to  axis = 2
     #    Step 2. Apply padding to this changed tensor
     #    Step 3. Remove the extra dimension added in step 1.
+    #print('stride')
+    #print(stride)
+    #print(kernel)
+    #print(padding)
     if len(kernel) == 1:
         dummy_axis = 2
         # setting 0 padding to the new dim to be added.
-        padding = (0, padding[0], 0, padding[1])
-        pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=2)
+        #print("length of input: " + str(len(inputs)))
+        #print(inputs)
+        #print("length of padding: " + str(len(p	adding)))
+        #print(padding)
+        if len(padding) == 1:
+            dummy_axis = 3
+            padding = (0, padding[0], 0, padding[0])
+            pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=2)
+            # Step 1.
+            curr_sym = symbol.expand_dims(inputs[0], axis=dummy_axis)
 
-        # Step 1.
-        curr_sym = symbol.expand_dims(inputs[0], axis=dummy_axis)
+            # Step 2. Common for all tensor sizes
+            new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
 
-        # Step 2. Common for all tensor sizes
-        new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+            # Step 3: Removing extra dim added.
+            new_pad_op = symbol.split(new_pad_op, axis=dummy_axis, num_outputs=1, squeeze_axis=1)
+        else:
+            padding = (0, padding[0], 0, padding[1])
+            pad_width = (0, 0, 0, 0) + _pad_sequence_fix(padding, kernel_dim=2)
 
-        # Step 3: Removing extra dim added.
-        new_pad_op = symbol.split(new_pad_op, axis=dummy_axis, num_outputs=1, squeeze_axis=1)
+            # Step 1.
+            curr_sym = symbol.expand_dims(inputs[0], axis=dummy_axis)
+            if len(padding) == 1:
+                curr_sym = symbol.expand_dims(inputs, axis=dummy_axis)
+
+            # Step 2. Common for all tensor sizes
+            new_pad_op = symbol.pad(curr_sym, mode='edge', pad_width=pad_width)
+
+            # Step 3: Removing extra dim added.
+            new_pad_op = symbol.split(new_pad_op, axis=dummy_axis, num_outputs=1, squeeze_axis=1)
     else:
         # Add padding attr if not provided.
         if padding is None:

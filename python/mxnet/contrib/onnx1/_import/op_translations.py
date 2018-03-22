@@ -205,6 +205,8 @@ def softmax(attrs, inputs, cls):
 
 def conv(attrs, inputs, cls):
     """Compute N-D convolution on (N+2)-D input."""
+    # print("conv")
+    # print(inputs)
     new_attrs = translation_utils._fix_attribute_names(attrs, {'kernel_shape' : 'kernel',
                                                                'strides' : 'stride',
                                                                'pads': 'pad',
@@ -354,7 +356,7 @@ def squeeze(attrs, inputs, cls):
 
 def take(attrs, inputs, cls):
     """ Takes elements from an input array along the given axis. Currently only slicing along axis 0 is supported for now."""
-    return 'take', attrs, inputs
+    return 'take', attrs, inputs # [<Symbol param_1> - data, <Symbol input_0> - indices]
 
 #Powers
 def reciprocal(attrs, inputs, cls):
@@ -432,7 +434,7 @@ def max_pooling(attrs, inputs, cls):
                                                        })
 
     new_attrs = translation_utils._add_extra_attributes(new_attrs,
-                                                        {'pool_type': 'avg',
+                                                        {'pool_type': 'max',
                                                          'pooling_convention': 'valid'
                                                         })
     new_op = translation_utils._fix_pooling('max', inputs, new_attrs)
